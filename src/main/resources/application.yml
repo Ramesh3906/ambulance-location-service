@@ -1,0 +1,132 @@
+#spring:
+#  application:
+#    name: ambulance-location-service
+#
+#  datasource:
+#    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:ambulance}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+#    username: ${DB_USERNAME:ambulance}
+#    password: ${DB_PASSWORD:ambulance}
+#    driver-class-name: com.mysql.cj.jdbc.Driver
+#
+#  jpa:
+#    open-in-view: false
+#    hibernate:
+#      ddl-auto: validate
+#    properties:
+#      hibernate:
+#        format_sql: true
+#
+#  data:
+#    redis:
+#      host: ${REDIS_HOST:localhost}
+#      port: ${REDIS_PORT:6379}
+#      timeout: 2s
+#
+#  flyway:
+#    enabled: true
+#
+#server:
+#  port: ${SERVER_PORT:8080}
+#
+#management:
+#  endpoints:
+#    web:
+#      exposure:
+#        include: health,info,metrics
+#  endpoint:
+#    health:
+#      probes:
+#        enabled: true
+#
+#ambulance:
+#  geo:
+#    h3-resolution: 8
+#    default-radius-km: 5
+#    max-radius-km: 50
+#    default-limit: 10
+#    max-limit: 50
+#    stale-location-seconds: 30
+#  redis:
+#    location-key-prefix: "ambulance:location:"
+#    cell-key-prefix: "ambulance:h3:cell:"
+#    entity-cell-key-prefix: "ambulance:h3:entity-cell:"
+#    location-channel: "ambulance:location-updates"
+
+spring:
+  application:
+    name: ambulance-location-service
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/ambulance?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: ambulance
+    password: ambulance
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2s
+
+  flyway:
+    enabled: true
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+ambulance:
+  geo:
+    strategy: H3_GRID_DISK        # <- switch to REDIS_GEO_RADIUS to use native GEOSEARCH
+    dual-write: true              # keeps both indexes in sync so switching is instant
+    allow-request-override: false # true => request body "strategy" wins (A/B testing)
+    h3-resolution: 8
+    h3-cell-edge-km: 0            # 0 = derived from resolution
+    h3-max-k: 0                   # 0 = uncapped gridDisk radius
+    default-radius-km: 5
+    max-radius-km: 50
+    default-limit: 10
+    max-limit: 50
+    candidate-multiplier: 5
+    stale-location-seconds: 300   # hidden from /nearby after this age
+    location-ttl-seconds: 360     # 120  by default revert this removed from Redis after this age
+    stale-cleanup-ms: 60000       # cleanup job interval
+  security:
+    jwt:
+      secret: "${JWT_SECRET:Y2hhbmdlLW1lLXRoaXMtaXMtYS0zMi1ieXRlLWRldi1zZWNyZXQh}"
+      issuer: ambulance-location-service
+      access-token-minutes: 30
+      refresh-token-days: 30
+
+
+  redis:
+    location-key-prefix: "ambulance:location:"
+    cell-key-prefix: "ambulance:h3:cell:"
+    entity-cell-key-prefix: "ambulance:h3:entity-cell:"
+    geo-key: "ambulance:geo:index"
+    location-channel: "ambulance:location-updates"
+    trip-session-key-prefix: "ambulance:trip:session:"
+    trip-snapshot-key-prefix: "ambulance:trip:tracking:"
+    trip-channel: "ambulance:trip-updates"
+
+  trip:
+    tracking-ttl-seconds: 21600
+    arrival-threshold-km: 0.15
